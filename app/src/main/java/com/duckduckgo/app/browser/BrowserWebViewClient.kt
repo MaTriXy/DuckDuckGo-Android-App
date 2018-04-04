@@ -18,31 +18,23 @@ package com.duckduckgo.app.browser
 
 import android.graphics.Bitmap
 import android.net.Uri
-import android.support.annotation.AnyThread
 import android.support.annotation.WorkerThread
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import com.duckduckgo.app.global.isHttp
-import com.duckduckgo.app.httpsupgrade.HttpsUpgrader
-import com.duckduckgo.app.privacymonitor.model.TrustedSites
-import com.duckduckgo.app.trackerdetection.TrackerDetector
-import com.duckduckgo.app.trackerdetection.model.ResourceType
 import timber.log.Timber
-import java.util.concurrent.CountDownLatch
 import javax.inject.Inject
 
 
 class BrowserWebViewClient @Inject constructor(
-        private val requestRewriter: DuckDuckGoRequestRewriter,
-        private var trackerDetector: TrackerDetector,
-        private var httpsUpgrader: HttpsUpgrader,
-        private val specialUrlDetector: SpecialUrlDetector
+        private val requestRewriter: RequestRewriter,
+        private val specialUrlDetector: SpecialUrlDetector,
+        private val webViewRequestInterceptor: WebViewRequestInterceptor
 ) : WebViewClient() {
 
     var webViewClientListener: WebViewClientListener? = null
-
+    var currentUrl: String? = null
 
     /**
      * This is the new method of url overriding available from API 24 onwards
@@ -84,6 +76,7 @@ class BrowserWebViewClient @Inject constructor(
     }
 
     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+        currentUrl = url
         webViewClientListener?.loadingStarted()
         webViewClientListener?.urlChanged(url)
     }
@@ -93,71 +86,18 @@ class BrowserWebViewClient @Inject constructor(
     }
 
     @WorkerThread
-    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-        Timber.v("Intercepting resource ${request.url} on page ${view.urlFromAnyThread()}}")
-
-        if (shouldUpgrade(request)) {
-            val newUri = httpsUpgrader.upgrade(request.url)
-            view.post { view.loadUrl(newUri.toString()) }
-            return WebResourceResponse(null, null, null)
-        }
-
-        val documentUrl = view.urlFromAnyThread() ?: return null
-
-        if (TrustedSites.isTrusted(documentUrl)) {
-            return null
-        }
-
-        if (request.url != null && request.url.isHttp) {
-            webViewClientListener?.pageHasHttpResources(documentUrl)
-        }
-
-        if (shouldBlock(request, documentUrl)) {
-            return WebResourceResponse(null, null, null)
-        }
-
-        return null
-    }
-
-    private fun shouldUpgrade(request: WebResourceRequest) =
-            request.isForMainFrame && request.url != null && httpsUpgrader.shouldUpgrade(request.url)
-
-    private fun shouldBlock(request: WebResourceRequest, documentUrl: String?): Boolean {
-        val url = request.url.toString()
-
-        if (request.isForMainFrame || documentUrl == null) {
-            return false
-        }
-
-        val trackingEvent = trackerDetector.evaluate(url, documentUrl, ResourceType.from(request)) ?: return false
-        webViewClientListener?.trackerDetected(trackingEvent)
-        return trackingEvent.blocked
+    override fun shouldInterceptRequest(webView: WebView, request: WebResourceRequest): WebResourceResponse? {
+        Timber.v("Intercepting resource ${request.url} on page $currentUrl")
+        return webViewRequestInterceptor.shouldIntercept(request, webView, currentUrl, webViewClientListener)
     }
 
     /**
      * Utility to function to execute a function, and then return true
      *
      * Useful to reduce clutter in repeatedly including `return true` after doing the real work.
-     */
+     */ 
     private inline fun consume(function: () -> Unit): Boolean {
         function()
         return true
     }
-
-    /**
-     * Access WebView.url from any thread. If you are on the main thread it is more efficient to use
-     * WebView.url directly.
-     */
-    @AnyThread
-    private fun WebView.urlFromAnyThread(): String? {
-        val latch = CountDownLatch(1)
-        var safeUrl: String? = null
-        post {
-            safeUrl = url
-            latch.countDown()
-        }
-        latch.await()
-        return safeUrl
-    }
-
 }

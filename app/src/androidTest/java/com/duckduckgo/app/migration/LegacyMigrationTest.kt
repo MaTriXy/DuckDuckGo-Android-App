@@ -28,18 +28,22 @@ import com.duckduckgo.app.browser.omnibar.QueryUrlConverter
 import com.duckduckgo.app.global.db.AppDatabase
 import com.duckduckgo.app.migration.legacy.LegacyDb
 import com.duckduckgo.app.migration.legacy.LegacyDbContracts
+import com.duckduckgo.app.statistics.store.StatisticsDataStore
+import com.nhaarman.mockito_kotlin.mock
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class LegacyMigrationTest {
 
     // target context else we can't write a db file
-    val context = InstrumentationRegistry.getTargetContext()
-    val urlConverter = QueryUrlConverter(DuckDuckGoRequestRewriter(DuckDuckGoUrlDetector()))
+    private val context = InstrumentationRegistry.getTargetContext()
+    private var mockStatisticsStore: StatisticsDataStore = mock()
+    private val urlConverter = QueryUrlConverter(DuckDuckGoRequestRewriter(DuckDuckGoUrlDetector(), mockStatisticsStore))
 
-    var appDatabase: AppDatabase = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
-    var bookmarksDao = MockBookmarksDao()
+    private var appDatabase: AppDatabase = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+    private var bookmarksDao = StubBookmarksDao()
 
     @After
     fun after() {
@@ -51,7 +55,7 @@ class LegacyMigrationTest {
 
         deleteLegacyDb()
 
-        val migration = LegacyMigration(appDatabase, bookmarksDao, context, urlConverter);
+        val migration = LegacyMigration(appDatabase, bookmarksDao, context, urlConverter)
 
         migration.start { favourites, searches ->
             assertEquals(0, favourites)
@@ -68,7 +72,7 @@ class LegacyMigrationTest {
         populateLegacyDB()
 
         // migrate
-        val migration = LegacyMigration(appDatabase, bookmarksDao, context, urlConverter);
+        val migration = LegacyMigration(appDatabase, bookmarksDao, context, urlConverter)
 
         migration.start { favourites, searches ->
             assertEquals(1, favourites)
@@ -123,9 +127,12 @@ class LegacyMigrationTest {
         return values
     }
 
-    class MockBookmarksDao(): BookmarksDao {
-
+    class StubBookmarksDao : BookmarksDao {
         var bookmarks = mutableListOf<BookmarkEntity>()
+
+        override fun update(bookmarkEntity: BookmarkEntity) {
+            throw UnsupportedOperationException()
+        }
 
         override fun insert(bookmark: BookmarkEntity) {
             bookmarks.add(bookmark)

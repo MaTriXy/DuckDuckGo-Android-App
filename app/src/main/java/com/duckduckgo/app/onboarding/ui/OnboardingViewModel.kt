@@ -16,29 +16,12 @@
 
 package com.duckduckgo.app.onboarding.ui
 
-import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.ViewModel
 import com.duckduckgo.app.onboarding.store.OnboardingStore
 
-class OnboardingViewModel(onboardingStore: OnboardingStore) : ViewModel() {
-
-    data class ViewState(
-            val showHome: Boolean
-    )
-
-    val viewState = MutableLiveData<OnboardingViewModel.ViewState>()
-
-    init {
-        viewState.value = OnboardingViewModel.ViewState(
-                showHome = !onboardingStore.shouldShow
-        )
-        onboardingStore.onboardingShown()
-    }
+class OnboardingViewModel(private val onboardingStore: OnboardingStore) : ViewModel() {
 
     fun onOnboardingDone() {
-        viewState.value = viewState.value?.copy(
-                showHome = true
-        )
+        onboardingStore.onboardingShown()
     }
-
 }

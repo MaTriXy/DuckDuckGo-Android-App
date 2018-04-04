@@ -19,24 +19,29 @@ package com.duckduckgo.app.global
 import android.app.Activity
 import android.app.Application
 import android.app.Service
+import android.support.v4.app.Fragment
 import com.duckduckgo.app.browser.BuildConfig
 import com.duckduckgo.app.di.DaggerAppComponent
 import com.duckduckgo.app.job.AppConfigurationSyncer
 import com.duckduckgo.app.migration.LegacyMigration
+import com.duckduckgo.app.statistics.api.StatisticsUpdater
+import com.duckduckgo.app.surrogates.ResourceSurrogateLoader
 import com.duckduckgo.app.trackerdetection.TrackerDataLoader
-import dagger.android.AndroidInjector
-import dagger.android.DispatchingAndroidInjector
-import dagger.android.HasActivityInjector
-import dagger.android.HasServiceInjector
+import com.squareup.leakcanary.LeakCanary
+import dagger.android.*
+import dagger.android.support.HasSupportFragmentInjector
 import io.reactivex.schedulers.Schedulers
 import org.jetbrains.anko.doAsync
 import timber.log.Timber
 import javax.inject.Inject
 
-class DuckDuckGoApplication : HasActivityInjector, HasServiceInjector, Application() {
+open class DuckDuckGoApplication : HasActivityInjector, HasServiceInjector, HasSupportFragmentInjector, Application() {
 
     @Inject
     lateinit var activityInjector: DispatchingAndroidInjector<Activity>
+
+    @Inject
+    lateinit var supportFragmentInjector: DispatchingAndroidInjector<Fragment>
 
     @Inject
     lateinit var serviceInjector: DispatchingAndroidInjector<Service>
@@ -48,22 +53,39 @@ class DuckDuckGoApplication : HasActivityInjector, HasServiceInjector, Applicati
     lateinit var trackerDataLoader: TrackerDataLoader
 
     @Inject
+    lateinit var resourceSurrogateLoader: ResourceSurrogateLoader
+
+    @Inject
     lateinit var appConfigurationSyncer: AppConfigurationSyncer
 
     @Inject
     lateinit var migration: LegacyMigration
 
+    @Inject
+    lateinit var statisticsUpdater: StatisticsUpdater
+
     override fun onCreate() {
         super.onCreate()
+
+        if (!installLeakCanary()) return
 
         configureDependencyInjection()
         configureLogging()
         configureCrashReporting()
 
+        initializeStatistics()
         loadTrackerData()
         configureDataDownloader()
 
         migrateLegacyDb()
+    }
+
+    protected open fun installLeakCanary(): Boolean {
+        if (LeakCanary.isInAnalyzerProcess(this)) {
+            return false
+        }
+        LeakCanary.install(this)
+        return true
     }
 
     private fun migrateLegacyDb() {
@@ -75,14 +97,17 @@ class DuckDuckGoApplication : HasActivityInjector, HasServiceInjector, Applicati
     }
 
     private fun loadTrackerData() {
-        Schedulers.io().scheduleDirect { trackerDataLoader.loadData() }
+        doAsync {
+            trackerDataLoader.loadData()
+            resourceSurrogateLoader.loadData()
+        }
     }
 
     private fun configureLogging() {
         if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
     }
 
-    private fun configureDependencyInjection() {
+    protected open fun configureDependencyInjection() {
         DaggerAppComponent.builder()
                 .application(this)
                 .create(this)
@@ -91,6 +116,10 @@ class DuckDuckGoApplication : HasActivityInjector, HasServiceInjector, Applicati
 
     private fun configureCrashReporting() {
         crashReportingInitializer.init(this)
+    }
+
+    private fun initializeStatistics() {
+        statisticsUpdater.initializeAtb()
     }
 
     /**
@@ -105,10 +134,12 @@ class DuckDuckGoApplication : HasActivityInjector, HasServiceInjector, Applicati
                 .doAfterTerminate({
                     appConfigurationSyncer.scheduleRegularSync(this)
                 })
-                .subscribe({}, { Timber.w(it, "Failed to download initial app configuration") })
+                .subscribe({}, { Timber.w("Failed to download initial app configuration ${it.localizedMessage}") })
     }
 
     override fun activityInjector(): AndroidInjector<Activity> = activityInjector
+
+    override fun supportFragmentInjector(): AndroidInjector<Fragment> = supportFragmentInjector
 
     override fun serviceInjector(): AndroidInjector<Service> = serviceInjector
 }

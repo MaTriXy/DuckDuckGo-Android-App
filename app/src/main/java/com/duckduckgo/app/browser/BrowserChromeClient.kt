@@ -16,8 +16,12 @@
 
 package com.duckduckgo.app.browser
 
+import android.net.Uri
+import android.view.View
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import timber.log.Timber
 import javax.inject.Inject
 
 
@@ -25,7 +29,37 @@ class BrowserChromeClient @Inject constructor() : WebChromeClient() {
 
     var webViewClientListener: WebViewClientListener? = null
 
-    override fun onProgressChanged(view: WebView?, newProgress: Int) {
+    private var customView: View? = null
+
+    override fun onShowCustomView(view: View, callback: CustomViewCallback?) {
+        Timber.i("on show custom view")
+
+        if(customView != null) {
+            callback?.onCustomViewHidden()
+            return
+        }
+
+        customView = view
+        webViewClientListener?.goFullScreen(view)
+    }
+
+    override fun onHideCustomView() {
+        Timber.i("hide custom view")
+
+        webViewClientListener?.exitFullScreen()
+        customView = null
+    }
+
+    override fun onProgressChanged(view: WebView, newProgress: Int) {
         webViewClientListener?.progressChanged(newProgress)
+    }
+
+    override fun onReceivedTitle(view: WebView, title: String) {
+        webViewClientListener?.titleReceived(title)
+    }
+
+    override fun onShowFileChooser(webView: WebView, filePathCallback: ValueCallback<Array<Uri>>, fileChooserParams: FileChooserParams): Boolean {
+        webViewClientListener?.showFileChooser(filePathCallback, fileChooserParams)
+        return true
     }
 }

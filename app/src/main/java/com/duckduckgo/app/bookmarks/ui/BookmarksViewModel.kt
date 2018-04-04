@@ -20,21 +20,23 @@ import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModel
-import android.support.annotation.WorkerThread
 import com.duckduckgo.app.bookmarks.db.BookmarkEntity
 import com.duckduckgo.app.bookmarks.db.BookmarksDao
-import com.duckduckgo.app.bookmarks.ui.BookmarksViewModel.Command.ConfirmDeleteBookmark
-import com.duckduckgo.app.bookmarks.ui.BookmarksViewModel.Command.OpenBookmark
+import com.duckduckgo.app.bookmarks.ui.BookmarksViewModel.Command.*
+import com.duckduckgo.app.bookmarks.ui.SaveBookmarkDialogFragment.SaveBookmarkListener
 import com.duckduckgo.app.global.SingleLiveEvent
+import io.reactivex.schedulers.Schedulers
 
-class BookmarksViewModel(val dao: BookmarksDao): ViewModel() {
+class BookmarksViewModel(val dao: BookmarksDao): SaveBookmarkListener, ViewModel() {
 
-    data class ViewState(val bookmarks: List<BookmarkEntity> = emptyList())
+    data class ViewState(val showBookmarks: Boolean = false,
+                         val bookmarks: List<BookmarkEntity> = emptyList())
 
     sealed class Command {
 
         class OpenBookmark(val bookmark: BookmarkEntity) : Command()
         class ConfirmDeleteBookmark(val bookmark: BookmarkEntity) : Command()
+        class ShowEditBookmark(val bookmark: BookmarkEntity) : Command()
 
     }
 
@@ -54,8 +56,14 @@ class BookmarksViewModel(val dao: BookmarksDao): ViewModel() {
         bookmarks.removeObserver(bookmarksObserver)
     }
 
+    override fun onBookmarkSaved(id: Int?, title: String, url: String) {
+        id?.let {
+            editBookmark(it, title, url)
+        }
+    }
+
     private fun onBookmarksChanged(bookmarks: List<BookmarkEntity>) {
-        viewState.value = viewState.value?.copy(bookmarks)
+        viewState.value = viewState.value?.copy(showBookmarks = bookmarks.isNotEmpty(), bookmarks = bookmarks)
     }
 
     fun onSelected(bookmark: BookmarkEntity) {
@@ -66,9 +74,20 @@ class BookmarksViewModel(val dao: BookmarksDao): ViewModel() {
         command.value = ConfirmDeleteBookmark(bookmark)
     }
 
-    @WorkerThread
+    fun onEditBookmarkRequested(bookmark: BookmarkEntity) {
+        command.value = ShowEditBookmark(bookmark)
+    }
+
     fun delete(bookmark: BookmarkEntity) {
-        dao.delete(bookmark)
+        Schedulers.io().scheduleDirect {
+            dao.delete(bookmark)
+        }
+    }
+
+    private fun editBookmark(id: Int, title: String, url: String) {
+        Schedulers.io().scheduleDirect {
+            dao.update(BookmarkEntity(id, title, url))
+        }
     }
 
 }

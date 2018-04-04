@@ -16,12 +16,17 @@
 
 package com.duckduckgo.app.browser
 
+import android.net.Uri
+import android.view.View
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import com.duckduckgo.app.trackerdetection.model.TrackingEvent
 
 interface WebViewClientListener {
     fun loadingStarted()
     fun loadingFinished()
     fun progressChanged(newProgress: Int)
+    fun titleReceived(title: String)
     fun urlChanged(url: String?)
     fun trackerDetected(event: TrackingEvent)
     fun pageHasHttpResources(page: String?)
@@ -29,4 +34,7 @@ interface WebViewClientListener {
     fun sendEmailRequested(emailAddress: String)
     fun sendSmsRequested(telephoneNumber: String)
     fun dialTelephoneNumberRequested(telephoneNumber: String)
+    fun goFullScreen(view: View)
+    fun exitFullScreen()
+    fun showFileChooser(filePathCallback: ValueCallback<Array<Uri>>, fileChooserParams: WebChromeClient.FileChooserParams)
 }

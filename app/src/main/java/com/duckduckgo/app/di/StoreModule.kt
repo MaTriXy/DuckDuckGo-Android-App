@@ -16,18 +16,34 @@
 
 package com.duckduckgo.app.di
 
-import android.content.Context
 import com.duckduckgo.app.onboarding.store.OnboardingSharedPreferences
 import com.duckduckgo.app.onboarding.store.OnboardingStore
+import com.duckduckgo.app.privacy.store.PrivacySettingsSharedPreferences
+import com.duckduckgo.app.privacy.store.PrivacySettingsStore
+import com.duckduckgo.app.privacy.store.TermsOfServiceRawStore
+import com.duckduckgo.app.privacy.store.TermsOfServiceStore
+import com.duckduckgo.app.statistics.store.StatisticsDataStore
+import com.duckduckgo.app.statistics.store.StatisticsSharedPreferences
+import com.duckduckgo.app.tabs.model.TabDataRepository
+import com.duckduckgo.app.tabs.model.TabRepository
+import dagger.Binds
 import dagger.Module
-import dagger.Provides
 
 @Module
-class StoreModule {
+abstract class StoreModule {
 
-    @Provides
-    fun providesOnboardingStore(context: Context): OnboardingStore {
-        return OnboardingSharedPreferences(context)
-    }
+    @Binds
+    abstract fun bindStatisticsStore(statisticsStore: StatisticsSharedPreferences): StatisticsDataStore
 
+    @Binds
+    abstract fun bindOnboardingStore(onboardingStore: OnboardingSharedPreferences): OnboardingStore
+
+    @Binds
+    abstract fun bindPrivacySettingsStore(privacySettingsStore: PrivacySettingsSharedPreferences): PrivacySettingsStore
+
+    @Binds
+    abstract fun bindTermsOfServiceStore(termsOfServiceStore: TermsOfServiceRawStore): TermsOfServiceStore
+
+    @Binds
+    abstract fun bindTabReposistory(tabRepository: TabDataRepository): TabRepository
 }

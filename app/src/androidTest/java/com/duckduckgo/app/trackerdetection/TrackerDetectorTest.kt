@@ -16,7 +16,7 @@
 
 package com.duckduckgo.app.trackerdetection
 
-import com.duckduckgo.app.privacymonitor.store.PrivacySettingsStore
+import com.duckduckgo.app.privacy.store.PrivacySettingsStore
 import com.duckduckgo.app.trackerdetection.Client.ClientName.EASYLIST
 import com.duckduckgo.app.trackerdetection.Client.ClientName.EASYPRIVACY
 import com.duckduckgo.app.trackerdetection.model.*
@@ -32,11 +32,11 @@ class TrackerDetectorTest {
 
     private val networkTrackers = TrackerNetworks()
     private val settingStore: PrivacySettingsStore = mock()
-    private val trackerDetector = TrackerDetector(networkTrackers, settingStore)
+    private val trackerDetector = TrackerDetectorImpl(networkTrackers, settingStore)
 
     companion object {
         private val resourceType = ResourceType.UNKNOWN
-        private val network = "Network"
+        private const val network = "Network"
     }
 
     @Test

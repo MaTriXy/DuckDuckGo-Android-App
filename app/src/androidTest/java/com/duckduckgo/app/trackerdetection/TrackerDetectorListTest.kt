@@ -18,7 +18,7 @@ package com.duckduckgo.app.trackerdetection
 
 
 import android.support.test.runner.AndroidJUnit4
-import com.duckduckgo.app.privacymonitor.store.PrivacySettingsStore
+import com.duckduckgo.app.privacy.store.PrivacySettingsStore
 import com.duckduckgo.app.trackerdetection.Client.ClientName.*
 import com.duckduckgo.app.trackerdetection.model.ResourceType
 import com.duckduckgo.app.trackerdetection.model.TrackerNetworks
@@ -36,7 +36,7 @@ import org.junit.runner.RunWith
 class TrackerDetectorListTest {
 
     companion object {
-        private val documentUrl = "http://example.com"
+        private const val documentUrl = "http://example.com"
         private val resourceType = ResourceType.UNKNOWN
     }
 
@@ -56,11 +56,11 @@ class TrackerDetectorListTest {
         settingStore = mock()
         whenever(settingStore.privacyOn).thenReturn(true)
 
-        blockingOnlyTestee = TrackerDetector(TrackerNetworks(), settingStore)
+        blockingOnlyTestee = TrackerDetectorImpl(TrackerNetworks(), settingStore)
         blockingOnlyTestee.addClient(easyprivacyAdblock)
         blockingOnlyTestee.addClient(easylistAdblock)
 
-        testeeWithWhitelist = TrackerDetector(TrackerNetworks(), settingStore)
+        testeeWithWhitelist = TrackerDetectorImpl(TrackerNetworks(), settingStore)
         testeeWithWhitelist.addClient(trackersWhitelistAdblocks)
         testeeWithWhitelist.addClient(easyprivacyAdblock)
         testeeWithWhitelist.addClient(easylistAdblock)

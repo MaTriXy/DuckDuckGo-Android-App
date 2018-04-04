@@ -37,8 +37,14 @@ class BrowserPopupMenu : PopupWindow {
         } else {
             elevation = 6.toFloat()
         }
-
         animationStyle = android.R.style.Animation_Dialog
+    }
+
+    fun onMenuItemClicked(menuView: View, onClick: () -> Unit) {
+        menuView.setOnClickListener {
+            onClick()
+            dismiss()
+        }
     }
 
     fun show(rootView: View, anchorView: View) {
@@ -51,7 +57,7 @@ class BrowserPopupMenu : PopupWindow {
 
     companion object {
 
-        val margin = 30
+        private const val margin = 30
 
         fun inflate(layoutInflater: LayoutInflater): View {
             return layoutInflater.inflate(R.layout.popup_window_browser_menu, null)

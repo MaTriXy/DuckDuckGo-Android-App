@@ -31,14 +31,14 @@
         <android.support.constraint.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            tools:context="com.duckduckgo.app.privacymonitor.ui.PrivacyPracticesActivity"
+            tools:context="com.duckduckgo.app.privacy.ui.PrivacyPracticesActivity"
             tools:showIn="@layout/activity_privacy_practices">
 
             <android.support.constraint.ConstraintLayout
                 android:id="@+id/practicesBannerContainer"
                 android:layout_width="match_parent"
                 android:layout_height="169dp"
-                android:background="@color/subtleGrey">
+                android:background="@color/subtleGray">
 
                 <ImageView
                     android:id="@+id/practicesBanner"
@@ -76,7 +76,7 @@
                     android:letterSpacing="0.14"
                     android:text="@string/practicesMixed"
                     android:textAllCaps="true"
-                    android:textColor="@color/warmGrey"
+                    android:textColor="@color/warmGray"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     app:layout_constraintLeft_toLeftOf="parent"

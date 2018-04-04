@@ -19,34 +19,21 @@ package com.duckduckgo.app.di
 import android.arch.persistence.room.Room
 import android.content.Context
 import com.duckduckgo.app.global.db.AppDatabase
+import com.duckduckgo.app.global.db.AppDatabase.Companion.MIGRATION_1_TO_2
+import com.duckduckgo.app.global.db.AppDatabase.Companion.MIGRATION_2_TO_3
 import dagger.Module
 import dagger.Provides
 import javax.inject.Singleton
 
-@Module
+@Module(includes = [DaoModule::class])
 class DatabaseModule {
 
     @Provides
     @Singleton
     fun provideDatabase(context: Context): AppDatabase {
         return Room.databaseBuilder(context, AppDatabase::class.java, "app.db")
-                .fallbackToDestructiveMigration()
-                .build()
+            .addMigrations(MIGRATION_1_TO_2, MIGRATION_2_TO_3)
+            .build()
     }
-
-    @Provides
-    fun provideHttpsUpgradeDomainDao(database: AppDatabase) = database.httpsUpgradeDomainDao()
-
-    @Provides
-    fun provideDisconnectTrackDao(database: AppDatabase) = database.trackerDataDao()
-
-    @Provides
-    fun providesNetworkLeaderboardDao(database: AppDatabase) = database.networkLeaderboardDao()
-
-    @Provides
-    fun providesBookmarksDao(database: AppDatabase) = database.bookmarksDao()
-
-    @Provides
-    fun appConfigurationDao(database: AppDatabase) = database.appConfigurationDao()
 
 }
